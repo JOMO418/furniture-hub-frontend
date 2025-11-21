@@ -108,7 +108,7 @@ const Footer = () => {
                     </defs>
                   </svg>
                   <span className="font-semibold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-                    Jomo Software
+                    Jomo Software Solutions.
                   </span>
                 </div>
               </div>
