@@ -92,25 +92,12 @@ const Footer = () => {
                 <span>Nairobi, Kenya</span>
               </li>
             </ul>
-          </div>
-        </div>
-
-        <div className="pt-8 border-t border-pure-white/10">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-pure-white/50 text-sm text-center md:text-left">
-              © {currentYear} Furniture Hub. All rights reserved.
-            </p>
-            <div className="flex items-center gap-4">
-              {footerLinks.legal.map((link) => (
-                <Link key={link.path} to={link.path} className="text-pure-white/50 text-sm hover:text-pure-white transition-colors">
-                  {link.name}
-                </Link>
-              ))}
-              <span className="text-pure-white/30">|</span>
-              <div className="flex items-center gap-2">
-                <span className="text-pure-white/50 text-sm">Powered by</span>
-                <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 px-4 py-2 rounded-lg border border-yellow-500/20">
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none">
+            
+            <div className="mt-6 pt-6 border-t border-pure-white/10">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-pure-white/50">Powered by</span>
+                <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 px-3 py-1.5 rounded-lg border border-yellow-500/20">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
                     <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="url(#jomo-gradient)" />
                     <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="url(#jomo-gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <defs>
@@ -120,11 +107,31 @@ const Footer = () => {
                       </linearGradient>
                     </defs>
                   </svg>
-                  <span className="font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
-                    Jomo Software Solutions
+                  <span className="font-semibold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                    Jomo Software
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-8 border-t border-pure-white/10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-pure-white/50 text-sm text-center md:text-left">
+              © {currentYear} Furniture Hub. All rights reserved.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-sm">
+              {footerLinks.legal.map((link, index) => (
+                <React.Fragment key={link.path}>
+                  <Link to={link.path} className="text-pure-white/50 hover:text-pure-white transition-colors">
+                    {link.name}
+                  </Link>
+                  {index < footerLinks.legal.length - 1 && (
+                    <span className="text-pure-white/30 hidden md:inline">|</span>
+                  )}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         </div>
