@@ -1,21 +1,38 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../common/Button/Button';
 import Badge from '../../common/Badge/Badge';
+import Loader from '../../common/Loader/Loader';
 import { formatPrice, calculateDiscount } from '../../../utils/formatters';
+import { productService } from '../../../services';
 
 const OfferOfTheDay = () => {
+  const navigate = useNavigate();
+  
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [offerProduct, setOfferProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const offerProduct = {
-    id: 2,
-    name: "Milan Dining Table",
-    price: 38000,
-    salePrice: 32000,
-    image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=800",
-    description: "Elegant solid wood dining table that seats 6 comfortably. Timeless design perfect for family gatherings."
+  useEffect(() => {
+    fetchOfferProduct();
+  }, []);
+
+  const fetchOfferProduct = async () => {
+    try {
+      // Fetch featured products and find one with a sale price
+      const products = await productService.getFeatured(8);
+      const productOnSale = products.find(p => p.salePrice && p.salePrice < p.price);
+      
+      if (productOnSale) {
+        setOfferProduct(productOnSale);
+      }
+    } catch (err) {
+      console.error('Failed to load offer product:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const discount = calculateDiscount(offerProduct.price, offerProduct.salePrice);
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
 
@@ -36,6 +53,27 @@ const OfferOfTheDay = () => {
     return () => clearInterval(timer);
   }, []);
 
+  if (loading) {
+    return (
+      <section className="py-12 md:py-20 bg-light-sand">
+        <div className="container-custom">
+          <div className="bg-pure-white rounded-2xl shadow-soft overflow-hidden">
+            <div className="flex justify-center items-center py-20">
+              <Loader size="lg" />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Don't show section if no product with sale price
+  if (!offerProduct) {
+    return null;
+  }
+
+  const discount = calculateDiscount(offerProduct.price, offerProduct.salePrice);
+
   return (
     <section className="py-12 md:py-20 bg-light-sand">
       <div className="container-custom">
@@ -43,7 +81,11 @@ const OfferOfTheDay = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">
             
             <div className="relative aspect-[4/3] lg:aspect-auto">
-              <img src={offerProduct.image} alt={offerProduct.name} className="w-full h-full object-cover" />
+              <img 
+                src={offerProduct.images?.[0]} 
+                alt={offerProduct.name} 
+                className="w-full h-full object-cover" 
+              />
               <Badge variant="gold" size="lg" className="absolute top-4 right-4">
                 Save {discount}%
               </Badge>
@@ -92,7 +134,12 @@ const OfferOfTheDay = () => {
                 </div>
               </div>
 
-              <Button variant="primary" size="lg" fullWidth onClick={() => window.location.href = `/product/milan-dining-table`}>
+              <Button 
+                variant="primary" 
+                size="lg" 
+                fullWidth 
+                onClick={() => navigate(`/product/${offerProduct.slug}`)}
+              >
                 Shop This Deal
               </Button>
             </div>

@@ -68,8 +68,8 @@ const ProductModal = () => {
               <div className="sticky top-0">
                 <div className="relative aspect-square rounded-lg overflow-hidden bg-pure-white mb-4">
                   <img
-                    src={product.images[selectedImage]}
-                    alt={product.name}
+                    src={product.images[selectedImage]?.url}
+                    alt={product.images[selectedImage]?.alt || product.name}
                     className="w-full h-full object-contain"
                   />
                   {product.bestSeller && (
@@ -102,8 +102,8 @@ const ProductModal = () => {
                         }`}
                       >
                         <img
-                          src={image}
-                          alt={`${product.name} ${index + 1}`}
+                          src={image.url}
+                          alt={image.alt || `${product.name} ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
                       </button>
@@ -117,7 +117,7 @@ const ProductModal = () => {
               
               <div className="mb-4">
                 <span className="text-sm text-warm-gray uppercase tracking-wide">
-                  {product.category.replace('-', ' ')}
+                  {(product.category || '').replace('-', ' ')}
                 </span>
               </div>
 
@@ -151,7 +151,7 @@ const ProductModal = () => {
                   Specifications
                 </h3>
                 <div className="space-y-2">
-                  {Object.entries(product.specifications).map(([key, value]) => (
+                  {product.specifications && Object.entries(product.specifications).map(([key, value]) => (
                     <div key={key} className="flex justify-between py-2 border-b border-border-color">
                       <span className="text-sm text-warm-gray capitalize">
                         {key.replace(/([A-Z])/g, ' $1').trim()}

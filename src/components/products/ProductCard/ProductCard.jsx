@@ -20,7 +20,7 @@ const ProductCard = ({ product }) => {
 
   const handleViewDetails = (e) => {
     e.stopPropagation();
-    navigate(`/product/${product.id}`);
+    navigate(`/product/${product.slug}`);
   };
 
   return (
@@ -32,8 +32,8 @@ const ProductCard = ({ product }) => {
           onClick={handleQuickView}
         >
           <img
-            src={product.images[0]}
-            alt={product.name}
+            src={product.images?.[0]?.url || ''}
+            alt={product.images?.[0]?.alt || product.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />

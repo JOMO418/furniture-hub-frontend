@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockProducts } from '../../data/mockProducts';
+import { productService } from '../../services';
 import { useCartStore } from '../../store/cartStore';
 import Button from '../../components/common/Button/Button';
 import Badge from '../../components/common/Badge/Badge';
@@ -9,23 +9,52 @@ import { formatPrice } from '../../utils/formatters';
 import { ChevronLeft, Heart, Share2, Truck, Shield, Clock } from 'lucide-react';
 
 const ProductPage = () => {
-  const { id } = useParams();
+  const { slug } = useParams(); // Changed from 'id' to 'slug'
   const navigate = useNavigate();
   const addToCart = useCartStore((state) => state.addToCart);
   
   const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Fetch product by slug
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const foundProduct = mockProducts.find(p => p.id === parseInt(id));
-      setProduct(foundProduct);
-      setLoading(false);
-    }, 300);
-  }, [id]);
+    const fetchProduct = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch product from backend
+        const productData = await productService.getBySlug(slug);
+        setProduct(productData);
+        
+        // Fetch related products (same category)
+        if (productData.category) {
+          try {
+            const relatedData = await productService.getByCategory(productData.category, { limit: 4 });
+            // Filter out current product
+            const filtered = relatedData.products.filter(p => p.slug !== slug);
+            setRelatedProducts(filtered.slice(0, 4));
+          } catch (err) {
+            console.error('Error fetching related products:', err);
+            // Continue even if related products fail
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        setError(err.message || 'Product not found');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (slug) {
+      fetchProduct();
+    }
+  }, [slug]);
 
   const handleAddToCart = () => {
     if (product) {
@@ -41,19 +70,18 @@ const ProductPage = () => {
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-ivory">
         <h2 className="text-2xl font-serif mb-4 text-charcoal">Product Not Found</h2>
+        <p className="text-warm-gray mb-6">{error || 'The product you are looking for does not exist.'}</p>
         <Button onClick={() => navigate('/shop')}>Back to Shop</Button>
       </div>
     );
   }
 
-  const images = product.images || [];
-  const relatedProducts = mockProducts
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
+  // Extract images from backend format
+  const images = product.images?.map(img => img.url) || [];
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -76,7 +104,7 @@ const ProductPage = () => {
           <div className="space-y-4">
             <div className="aspect-square bg-pure-white rounded-lg overflow-hidden border border-border-color">
               <img
-                src={images[selectedImage]}
+                src={images[selectedImage] || images[0] || '/placeholder.jpg'}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -139,7 +167,7 @@ const ProductPage = () => {
               </div>
 
               <div className="flex items-center gap-4 text-sm text-warm-gray">
-                <span>SKU: {product.sku || `FH${product.id.toString().padStart(4, '0')}`}</span>
+                <span>SKU: {product.sku || 'N/A'}</span>
                 <span>•</span>
                 <span className={product.stock > 0 ? 'text-sage' : 'text-deep-navy'}>
                   {product.stock > 0 ? `In Stock (${product.stock} available)` : 'Out of Stock'}
@@ -175,6 +203,7 @@ const ProductPage = () => {
                   <button
                     onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
                     className="px-4 py-2 hover:bg-light-sand transition-colors text-charcoal"
+                    disabled={product.stock === 0}
                   >
                     +
                   </button>
@@ -218,7 +247,7 @@ const ProductPage = () => {
             </div>
 
             {/* Product Specifications */}
-            {product.specifications && (
+            {product.specifications && Object.keys(product.specifications).length > 0 && (
               <div className="space-y-3 pt-6 border-t border-border-color">
                 <h3 className="font-serif text-xl text-charcoal">Product Specifications</h3>
                 <dl className="space-y-2">
@@ -243,16 +272,16 @@ const ProductPage = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map(p => (
                 <div
-                  key={p.id}
+                  key={p._id}
                   onClick={() => {
-                    navigate(`/product/${p.id}`);
+                    navigate(`/product/${p.slug}`);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className="cursor-pointer group"
                 >
                   <div className="aspect-square bg-pure-white rounded-lg overflow-hidden mb-3 border border-border-color">
                     <img
-                      src={p.images?.[0]}
+                      src={p.images?.[0]?.url || '/placeholder.jpg'}
                       alt={p.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

@@ -1,11 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import SectionTitle from '../../components/common/SectionTitle/SectionTitle';
 import ProductGrid from '../../components/products/ProductGrid/ProductGrid';
-import Button from '../../components/common/Button/Button';
-import { mockProducts } from '../../data/mockProducts';
-import { useSearchParams } from 'react-router-dom';
+import Loader from '../../components/common/Loader/Loader';
+import { productService } from '../../services';
 
 const ShopPage = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pagination, setPagination] = useState(null);
+  
   const [sortBy, setSortBy] = useState('popular');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
@@ -16,7 +21,7 @@ const ShopPage = () => {
     { value: 'all', label: 'All Products' },
     { value: 'living-room', label: 'Living Room' },
     { value: 'bedroom', label: 'Bedroom' },
-    { value: 'dining-room', label: 'Dining Room' },
+    { value: 'dining', label: 'Dining' },
     { value: 'office', label: 'Office' },
     { value: 'outdoor', label: 'Outdoor' },
     { value: 'decor', label: 'Decor' }
@@ -37,57 +42,68 @@ const ShopPage = () => {
     { value: 'newest', label: 'Newest First' }
   ];
 
-  const filteredProducts = useMemo(() => {
-    let filtered = [...mockProducts];
-  
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query)
-      );
-    }
-  
-    // Category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.category === selectedCategory);
-    }
-  
-    // Price range filter
-    if (priceRange !== 'all') {
-      if (priceRange === '100000+') {
-        filtered = filtered.filter(p => (p.salePrice || p.price) >= 100000);
-      } else {
-        const [min, max] = priceRange.split('-').map(Number);
-        filtered = filtered.filter(p => {
-          const price = p.salePrice || p.price;
-          return price >= min && price <= max;
-        });
+  // Fetch products from backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        // Build filters object
+        const filters = {
+          page: 1,
+          limit: 50
+        };
+
+        // Add category filter
+        if (selectedCategory !== 'all') {
+          filters.category = selectedCategory;
+        }
+
+        // Add price range filter
+        if (priceRange !== 'all') {
+          if (priceRange === '100000+') {
+            filters.minPrice = 100000;
+          } else {
+            const [min, max] = priceRange.split('-').map(Number);
+            filters.minPrice = min;
+            filters.maxPrice = max;
+          }
+        }
+
+        // Add search query
+        if (searchQuery) {
+          filters.search = searchQuery;
+        }
+
+        // Add sorting
+        switch (sortBy) {
+          case 'price-low':
+            filters.sort = 'price';
+            break;
+          case 'price-high':
+            filters.sort = '-price';
+            break;
+          case 'newest':
+            filters.sort = '-createdAt';
+            break;
+          default:
+            filters.sort = '-featured,-bestSeller';
+        }
+
+        // Fetch from backend
+        const response = await productService.getAll(filters);
+        setProducts(response.products);
+        setPagination(response.pagination);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError(err.message || 'Failed to load products');
+      } finally {
+        setLoading(false);
       }
-    }
-  
-    // Sorting
-    switch (sortBy) {
-      case 'price-low':
-        filtered.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
-        break;
-      case 'newest':
-        filtered.sort((a, b) => b.id - a.id);
-        break;
-      default:
-        filtered.sort((a, b) => {
-          if (a.bestSeller && !b.bestSeller) return -1;
-          if (!a.bestSeller && b.bestSeller) return 1;
-          return 0;
-        });
-    }
-  
-    return filtered;
+    };
+
+    fetchProducts();
   }, [selectedCategory, priceRange, sortBy, searchQuery]);
 
   const clearFilters = () => {
@@ -109,6 +125,7 @@ const ShopPage = () => {
 
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           
+          {/* Sidebar Filters */}
           <aside className="lg:col-span-1 mb-8 lg:mb-0">
             <div className="bg-pure-white rounded-lg border border-border-color p-6 sticky top-24">
               
@@ -126,6 +143,7 @@ const ShopPage = () => {
 
               <div className="space-y-6">
                 
+                {/* Category Filter */}
                 <div>
                   <label className="block text-sm font-semibold text-charcoal mb-3 uppercase tracking-wide">
                     Category
@@ -147,6 +165,7 @@ const ShopPage = () => {
                   </div>
                 </div>
 
+                {/* Price Range Filter */}
                 <div className="pt-6 border-t border-border-color">
                   <label className="block text-sm font-semibold text-charcoal mb-3 uppercase tracking-wide">
                     Price Range
@@ -171,18 +190,20 @@ const ShopPage = () => {
             </div>
           </aside>
 
+          {/* Main Content */}
           <main className="lg:col-span-3">
             
+            {/* Top Bar */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
               <div>
                 {searchQuery ? (
                   <p className="text-warm-gray">
                     Search results for <span className="font-semibold text-charcoal">"{searchQuery}"</span> - 
-                    <span className="font-semibold text-charcoal"> {filteredProducts.length}</span> products found
+                    <span className="font-semibold text-charcoal"> {products.length}</span> products found
                   </p>
                 ) : (
                   <p className="text-warm-gray">
-                    Showing <span className="font-semibold text-charcoal">{filteredProducts.length}</span> products
+                    Showing <span className="font-semibold text-charcoal">{products.length}</span> products
                   </p>
                 )}
               </div>
@@ -203,7 +224,40 @@ const ShopPage = () => {
               </div>
             </div>
 
-            <ProductGrid products={filteredProducts} />
+            {/* Loading State */}
+            {loading && (
+              <div className="flex justify-center items-center py-20">
+                <Loader />
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-lg text-center">
+                <p className="font-semibold mb-1">Error loading products</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Products Grid */}
+            {!loading && !error && products.length > 0 && (
+              <ProductGrid products={products} />
+            )}
+
+            {/* Empty State */}
+            {!loading && !error && products.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-warm-gray text-lg mb-4">No products found</p>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-deep-navy hover:text-charcoal font-semibold"
+                  >
+                    Clear filters to see all products
+                  </button>
+                )}
+              </div>
+            )}
           </main>
         </div>
       </div>
